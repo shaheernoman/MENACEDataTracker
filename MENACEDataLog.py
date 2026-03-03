@@ -1,5 +1,7 @@
 import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog
+from tkinter import ttk, messagebox, simpledialog, filedialog
+import csv
+import datetime
 import matplotlib
 matplotlib.use("TkAgg")
 import matplotlib.pyplot as plt
@@ -195,6 +197,12 @@ class MenaceLogger:
                   bg=self.PAPER, fg=self.INK_LIGHT).pack(side="left", padx=(0,6))
         self._btn(ctrl_frame, "⊘ Reset All", self._reset,
                   bg=self.PAPER, fg="#999").pack(side="left")
+
+        # ── Export ────────────────────────────────────────────────────────
+        exp_frame = tk.Frame(parent, bg=self.PAPER)
+        exp_frame.pack(fill="x", pady=(6, 0))
+        self._btn(exp_frame, "↓ Export to CSV", self._export_csv,
+                  bg="#2a3a5a", fg="white", width=22).pack(fill="x")
 
         # ── Last result label ─────────────────────────────────────────────
         self.last_var = tk.StringVar(value="")
@@ -456,6 +464,65 @@ class MenaceLogger:
         if width:
             kw["width"] = width
         return tk.Button(parent, **kw)
+
+
+    def _export_csv(self):
+        if not self.games:
+            messagebox.showinfo("Export", "No games recorded yet — nothing to export.")
+            return
+
+        default_name = f"menace_results_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        filepath = filedialog.asksaveasfilename(
+            title="Export MENACE Results",
+            defaultextension=".csv",
+            initialfile=default_name,
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")]
+        )
+        if not filepath:
+            return  # user cancelled
+
+        wins   = sum(1 for g in self.games if g["type"] == "WIN")
+        losses = sum(1 for g in self.games if g["type"] == "LOSS")
+        draws  = sum(1 for g in self.games if g["type"] == "DRAW")
+        final_score = self.games[-1]["score"] if self.games else 0
+
+        try:
+            with open(filepath, "w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+
+                # Header metadata
+                writer.writerow(["MENACE Data Logger Export"])
+                writer.writerow(["Exported", datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")])
+                writer.writerow(["MENACE plays", "O (Noughts)"])
+                writer.writerow(["Score formula", "3 x Wins - Losses - Draws"])
+                writer.writerow([])
+
+                # Summary
+                writer.writerow(["SUMMARY"])
+                writer.writerow(["Total Games", len(self.games)])
+                writer.writerow(["Wins",        wins])
+                writer.writerow(["Losses",      losses])
+                writer.writerow(["Draws",       draws])
+                writer.writerow(["Final Score", final_score])
+                writer.writerow([])
+
+                # Per-game data
+                writer.writerow(["GAME LOG"])
+                writer.writerow(["Game", "Result", "Bead Colour", "Score Delta", "Running Score"])
+                for i, game in enumerate(self.games, start=1):
+                    delta = {"WIN": "+3", "LOSS": "-1", "DRAW": "-1"}[game["type"]]
+                    writer.writerow([
+                        i,
+                        game["type"],
+                        game["colour"] if game["colour"] else "—",
+                        delta,
+                        game["score"],
+                    ])
+
+            self.status_var.set(f"Exported {len(self.games)} games to: {filepath}")
+            messagebox.showinfo("Export Successful", f"Saved {len(self.games)} games to:\n{filepath}")
+        except Exception as e:
+            messagebox.showerror("Export Failed", str(e))
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────
