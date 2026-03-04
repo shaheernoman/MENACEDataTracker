@@ -409,7 +409,7 @@ class MenaceLogger:
         ax.yaxis.set_major_locator(ticker.MaxNLocator(integer=True))
 
         if not self.games:
-            ax.text(0.5, 0.5, "Record your first game →",
+            ax.text(0.5, 0.5, "Record the first game →",
                     transform=ax.transAxes,
                     ha="center", va="center",
                     fontfamily="monospace", fontsize=10,
